@@ -28,6 +28,7 @@
     "dotenv": "^8.2.0",
     "ejs": "^3.1.2",
     "express": "^4.17.1",
+    "node-cache": "^5.1.0",
     "node-fetch": "^2.6.0",
     "node-pg-migrate": "^4.8.0",
     "pg-promise": "^10.5.5",

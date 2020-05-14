@@ -113,12 +113,11 @@ export interface TransferResult {
 export interface Token {
   id: string;
   name: string;
-  symbol: string;
 }
 
 export function getTokenByName(tokenName: string): Promise<Token|null> {
   return new Promise((resolve, reject) => {
-    db.any(`SELECT id, name, symbol
+    db.any(`SELECT id, name
             FROM tokens
             WHERE name=$1`, [tokenName])
     .then((data) => {
@@ -126,7 +125,6 @@ export function getTokenByName(tokenName: string): Promise<Token|null> {
         return resolve({
           id:     data[0].id,
           name:   data[0].name,
-          symbol: data[0].symbol
         });
       } else {
         return resolve(null);
@@ -137,7 +135,7 @@ export function getTokenByName(tokenName: string): Promise<Token|null> {
 
 export function getTokenById(tokenId: string): Promise<Token|null> {
   return new Promise((resolve, reject) => {
-    db.any(`SELECT id, name, symbol
+    db.any(`SELECT id, name
             FROM tokens
             WHERE id=$1`, [tokenId])
     .then((data) => {
@@ -145,7 +143,6 @@ export function getTokenById(tokenId: string): Promise<Token|null> {
         return resolve({
           id:     data[0].id,
           name:   data[0].name,
-          symbol: data[0].symbol
         });
       } else {
         return resolve(null);
@@ -163,6 +160,8 @@ export function transfer(
 ): Promise<TransferResult> {
   return new Promise((resolve, reject) => {
     db.tx(async (t) => {
+      console.log(await getAllTokenBalances(sendUserId));
+      console.log(await getAllTokenBalances(recvUserId));
       const sendBalance: BigNumber = getTokenBalance(await getAllTokenBalances(sendUserId), token.name);
       const recvBalance: BigNumber = getTokenBalance(await getAllTokenBalances(recvUserId), token.name);
       const newSendBalance: BigNumber = sendBalance.minus(amount);
@@ -171,17 +170,19 @@ export function transfer(
       if (newSendBalance.isLessThan(new BigNumber(0))) {
         return resolve({
           success: false,
-          errorMsg: 'You do not have enough tokens nigga'
+          errorMsg: sendBalance.isLessThanOrEqualTo(new BigNumber(0))
+            ? `You don't have any ${token.name}`
+            : `You only have ${sendBalance.toString()} ${token.name}`
         });
       }
 
       await t.none(`UPDATE users
-                    SET balances = balances || '{"${token.name}": "${newSendBalance.toString()}"
-                    WHERE id=send_user_id`);
+                    SET balances = balances || '{"${token.name}": "${newSendBalance.toString()}"}'
+                    WHERE id=$1`, [sendUserId]);
 
       await t.none(`UPDATE users
-                    SET balances = balances || '{"${token.name}": "${newRecvBalance.toString()}"
-                    WHERE id=recv_user_id`);
+                    SET balances = balances || '{"${token.name}": "${newRecvBalance.toString()}"}'
+                    WHERE id=$1`, [recvUserId]);
 
       await t.none(`INSERT INTO transfers (
                       send_user_id,

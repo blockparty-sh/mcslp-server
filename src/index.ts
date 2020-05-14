@@ -39,44 +39,30 @@ function getBalances(serverId: number, uuid: string): Promise<Map<string, BigNum
 }
 
 app.get('/api/minecraft/command', (req: any, res) => {
+  // console.log(req);
   db.authenticateServer(req.query.password, req.ip)
   .then((serverData: db.Server|null) => {
     if (serverData === null) {
-      return res.json({
-        success: false,
-        msg: 'could not authenticate',
-      });
+      return res.send('could not authenticate');
     }
 
     if (typeof req.query.q === 'undefined') {
-      return res.json({
-        success: false,
-        msg: 'query parameter q does not exist',
-      });
+      return res.send('query parameter q does not exist');
     }
 
     const q: string = req.query.q.trim();
     const cmd: string[] = q.split(' ');
-    const uuid: string = req.query.uuid;
+    const uuid: string = req.query.uuid.replace(/-/g, '');
 
     if (cmd.length === 0) {
-      return res.json({
-        success: true,
-        msg: helpText()
-      });
+      return res.send(helpText());
     }
 
     if (cmd[0] === 'help') {
-      return res.json({
-        success: false,
-        msg: helpText(),
-      });
+      return res.send(helpText());
     }
     else if (cmd[0] === 'version') {
-      return res.json({
-        success: true,
-        msg: 'magic pixel 0.0.1 | magicpixel.xyz'
-      });
+      return res.send('magic pixel 0.0.1 | magicpixel.xyz');
     }
     else if (cmd[0] === 'balance' && (cmd.length === 1 || cmd.length === 2)) {
       getBalances(serverData.id, uuid)
@@ -95,36 +81,29 @@ app.get('/api/minecraft/command', (req: any, res) => {
           }
         }
 
-        return res.json({
-          success: true,
-          msg
-        });
+        return res.send(msg);
       });
     }
     else if (cmd[0] === 'send' && (cmd.length === 3 || cmd.length === 4)) {
-      const username:  string    = cmd[1];
-      const sendUuid:  string    = uuid;
+      console.log(cmd);
+      const sendUuid:  string    = uuid.replace(/-/g, '');
+      const username:  string    = cmd[1].toLowerCase();
       const amount:    BigNumber = new BigNumber(cmd[2]);
-      const tokenName: string    = (cmd.length === 4) ? cmd[3] : "MPX";
+      const tokenName: string    = ((cmd.length === 4) ? cmd[3] : "MPX").toLowerCase();
 
       Promise.all([
         // ensure sending uuid exists
         mojang.lookupMinecraftUsername(sendUuid),
         // ensure receiving username exists
-        mojang.lookupMinecraftUuid(req.params.username)
+        mojang.lookupMinecraftUuid(username)
       ])
       .then(([sendUsername, recvUuid]) => {
         if (sendUsername === null) {
-          return res.json({
-            success: false,
-            msg: 'sender not found',
-          });
+          return res.send('sender not found');
         }
+
         if (recvUuid === null) {
-          return res.json({
-            success: false,
-            msg: 'receiver not found'
-          });
+          return res.send('receiver not found');
         }
 
         Promise.all([
@@ -134,41 +113,30 @@ app.get('/api/minecraft/command', (req: any, res) => {
         ])
         .then(([sendUserId, recvUserId, token]) => {
           if (sendUserId === null) {
-            return res.json({
-              success: false,
-              error: 'uuid not found',
-            });
+            return res.send('uuid not found');
           }
 
           if (token === null) {
-            return res.json({
-              success: false,
-              error: 'token not found',
-            });
+            return res.send('token not found');
+          }
+
+          if (sendUserId === recvUserId) {
+            return res.send('cannot send to yourself');
           }
 
           db.transfer(serverData.id, sendUserId, recvUserId, token, amount)
           .then((result: db.TransferResult) => {
             if (result.success) {
-              return res.json({
-                success: true,
-                msg: 'Successfully sent',
-              });
+              return res.send(`Sent ${amount} to ${username}`);
             } else {
-              return res.json({
-                success: false,
-                msg: result.errorMsg,
-              });
+              return res.send(result.errorMsg);
             }
           })
         });
       });
     }
     else {
-      return res.json({
-        success: false,
-        msg: helpText()
-      });
+      return res.send(helpText());
     }
   });
 });
@@ -200,8 +168,8 @@ app.get('/api/balance/:uuid', (req: any, res) => {
 });
 
 app.get('/api/send/:uuid1/:uuid2/:token_id/:amount', (req: any, res) => {
-  const sendUuid: string = req.params.uuid1;
-  const recvUuid: string = req.params.uuid2;
+  const sendUuid: string = req.params.uuid1.replace(/-/g, '');
+  const recvUuid: string = req.params.uuid2.replace(/-/g, '');
   const tokenId: string = req.params.token_id;
   const amount: BigNumber = new BigNumber(req.params.amount);
 
@@ -245,6 +213,13 @@ app.get('/api/send/:uuid1/:uuid2/:token_id/:amount', (req: any, res) => {
           return res.json({
             success: false,
             error: 'token not found',
+          });
+        }
+
+        if (sendUserId === recvUserId) {
+          return res.json({
+            success: false,
+            msg: 'cannot send to yourself'
           });
         }
 
