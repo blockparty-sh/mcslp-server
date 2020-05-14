@@ -16,7 +16,9 @@
     "prebuild": "npm run lint",
     "build": "tsc",
     "test": "npm run build && nyc mocha",
-    "prepare": "npm run lint && npm run test && npm run build"
+    "prepare": "npm run lint && npm run test && npm run build",
+    "docs:dev": "vuepress dev docs",
+    "docs:build": "vuepress build docs"
   },
   "dependencies": {
     "bignumber.js": "^9.0.0",
@@ -28,7 +30,8 @@
     "node-fetch": "^2.6.0",
     "node-pg-migrate": "^4.8.0",
     "pg-promise": "^10.5.5",
-    "slpjs": "^0.27.2"
+    "slpjs": "^0.27.2",
+    "vuepress": "^1.5.0"
   },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.1",
