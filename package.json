@@ -18,7 +18,8 @@
     "test": "npm run build && nyc mocha",
     "prepare": "npm run lint && npm run test && npm run build",
     "docs:dev": "vuepress dev docs",
-    "docs:build": "vuepress build docs"
+    "docs:build": "vuepress build docs",
+    "db:reset": "node dist/migrate"
   },
   "dependencies": {
     "bignumber.js": "^9.0.0",
