@@ -11,6 +11,7 @@
   "private": "true",
   "scripts": {
     "start": "node dist/index.js",
+    "migrate": "node-pg-migrate",
     "lint": "tslint -c tslint.json -p tsconfig.json",
     "prebuild": "npm run lint",
     "build": "tsc",
@@ -18,17 +19,26 @@
     "prepare": "npm run lint && npm run test && npm run build"
   },
   "dependencies": {
+    "bignumber.js": "^9.0.0",
+    "bitbox-sdk": "^8.11.2",
+    "bitcore-lib-cash": "^8.20.1",
     "dotenv": "^8.2.0",
     "ejs": "^3.1.2",
     "express": "^4.17.1",
-    "pg-promise": "^10.5.5"
+    "node-fetch": "^2.6.0",
+    "node-pg-migrate": "^4.8.0",
+    "pg-promise": "^10.5.5",
+    "slpjs": "^0.27.2"
   },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.1",
+    "@types/bignumber.js": "^5.0.0",
     "@types/chai": "^4.2.11",
+    "@types/dotenv": "^8.2.0",
     "@types/express": "^4.17.6",
     "@types/mocha": "^7.0.2",
     "@types/node": "^13.13.6",
+    "@types/node-fetch": "^2.5.7",
     "chai": "^4.2.0",
     "chai-bytes": "^0.1.2",
     "mocha": "^7.1.1",
