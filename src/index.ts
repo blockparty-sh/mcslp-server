@@ -242,6 +242,40 @@ app.get('/api/send/:uuid1/:uuid2/:token_id/:amount', (req: any, res) => {
   });
 });
 
+app.get('/api/tokens', (req: any, res) => {
+  db.getAllTokens()
+  .then((tokens) => {
+    return res.json(tokens);
+  });
+});
+
+app.get('/api/servers', (req: any, res) => {
+  db.getAllServers()
+  .then((tokens) => {
+    return res.json(tokens.map(t => ({
+      id:         t.id,
+      game:       t.game,
+      ip_address: t.ip_address
+    })));
+  });
+});
+
+app.get('/api/server/transfers', (req: any, res) => {
+  db.authenticateServer(req.query.password, req.ip)
+  .then((serverData: db.Server|null) => {
+    if (serverData === null) {
+      return res.json({
+        success: false,
+        msg: 'could not authenticate',
+      });
+    }
+
+    db.getAllServerTransfers(serverData.id)
+    .then((transfers) => {
+      return res.json(transfers);
+    });
+  });
+});
 
 app.listen(config.port(), () => {
   console.log(`server started at http://localhost:${config.port()}`);

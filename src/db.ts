@@ -7,15 +7,16 @@ const pgp = pgPromise();
 const db = pgp(config.connString());
 
 export interface Server {
-    id: number;
-    game: string;
-    email: string;
+    id:         number;
+    game:       string;
+    email:      string;
+    ip_address: string;
 }
 
 export function authenticateServer(password: string, ipAddress: string): Promise<Server|null> {
   console.log(password, ipAddress);
   return new Promise((resolve, reject) => {
-    db.any(`SELECT id, game, email
+    db.any(`SELECT id, game, email, ip_address
             FROM servers
             WHERE password=crypt($1, password)
               AND ip_address=$2`, [
@@ -25,9 +26,10 @@ export function authenticateServer(password: string, ipAddress: string): Promise
     .then((data) => {
       if (data !== null && data.length === 1) {
         return resolve({
-          id:    data[0].id,
-          game:  data[0].game,
-          email: data[0].email
+          id:         data[0].id,
+          game:       data[0].game,
+          email:      data[0].email,
+          ip_address: data[0].ip_address,
         });
       } else {
         return resolve(null);
@@ -147,6 +149,71 @@ export function getTokenById(tokenId: string): Promise<Token|null> {
       } else {
         return resolve(null);
       }
+    });
+  });
+}
+
+export function getAllTokens(): Promise<Token[]> {
+  return new Promise((resolve, reject) => {
+    db.any(`SELECT id, name
+            FROM tokens`)
+    .then((data) => {
+      return resolve(data.map(d => ({
+        id:     d.id,
+        name:   d.name,
+      })));
+    });
+  });
+}
+
+export function getAllServers(): Promise<Server[]> {
+  return new Promise((resolve, reject) => {
+    db.any(`SELECT id, game, email, ip_address
+            FROM servers`)
+    .then((data) => {
+      return resolve(data.map(d => ({
+        id:         d.id,
+        game:       d.game,
+        email:      d.email,
+        ip_address: d.ip_address,
+      })));
+    });
+  });
+}
+
+export interface Transfer {
+  id: number;
+  send_username: string;
+  recv_username: string;
+  server_id: number;
+  token_id: string;
+  amount: BigNumber;
+  ts: string;
+}
+
+export function getAllServerTransfers(serverId: number): Promise<Transfer[]> {
+  return new Promise((resolve, reject) => {
+    db.any(`SELECT t.id,
+                   t.server_id,
+                   t.token_id,
+                   t.amount,
+                   t.ts,
+                   su.game_username AS send_username,
+                   ru.game_username AS recv_username
+            FROM transfers AS t
+            INNER JOIN users su ON t.send_user_id=su.id AND su.server_id=$1
+            INNER JOIN users ru ON t.recv_user_id=ru.id AND ru.server_id=$1
+            WHERE t.server_id=$1`, [serverId])
+    .then((data) => {
+      return resolve(data.map(d => ({
+        id:            d.id,
+        send_username: d.send_username,
+        recv_username: d.recv_username,
+        server_id:     d.server_id,
+        token_id:      d.token_id,
+        amount:        d.amount,
+        ts:            d.ts,
+      })));
     });
   });
 }
