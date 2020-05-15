@@ -43,11 +43,15 @@ app.get('/api/minecraft/command', (req: any, res) => {
   db.authenticateServer(req.query.password, req.ip)
   .then((serverData: db.Server|null) => {
     if (serverData === null) {
-      return res.send('could not authenticate');
+      return res.json({
+        msg: 'could not authenticate'
+      });
     }
 
     if (typeof req.query.q === 'undefined') {
-      return res.send('query parameter q does not exist');
+      return res.json({
+        msg: 'query parameter q does not exist'
+      });
     }
 
     const q: string = req.query.q.trim();
@@ -55,16 +59,24 @@ app.get('/api/minecraft/command', (req: any, res) => {
     const uuid: string = req.query.uuid.replace(/-/g, '');
 
     if (cmd.length === 0) {
-      return res.send(helpText());
+      return res.json({
+        msg: helpText()
+      });
     }
 
     if (cmd[0] === 'help') {
-      return res.send(helpText());
+      return res.json({
+        msg: helpText()
+      });
     }
     else if (cmd[0] === 'version') {
-      return res.send('magic pixel 0.0.1 | magicpixel.xyz');
+      return res.json({
+        msg: 'magic pixel 0.0.1 | magicpixel.xyz'
+      });
     }
-    else if (cmd[0] === 'balance' && (cmd.length === 1 || cmd.length === 2)) {
+    else if ((cmd[0] === 'b' || cmd[0] === 'balance') &&
+             (cmd.length === 1 || cmd.length === 2)
+    ) {
       getBalances(serverData.id, uuid)
       .then((balances) => {
         let msg = "";
@@ -81,10 +93,14 @@ app.get('/api/minecraft/command', (req: any, res) => {
           }
         }
 
-        return res.send(msg);
+        return res.json({
+          msg
+        });
       });
     }
-    else if (cmd[0] === 'send' && (cmd.length === 3 || cmd.length === 4)) {
+    else if ((cmd[0] === 's' || cmd[0] === 'send') &&
+             (cmd.length === 3 || cmd.length === 4)
+    ) {
       console.log(cmd);
       const sendUuid:  string    = uuid.replace(/-/g, '');
       const username:  string    = cmd[1].toLowerCase();
@@ -99,11 +115,15 @@ app.get('/api/minecraft/command', (req: any, res) => {
       ])
       .then(([sendUsername, recvUuid]) => {
         if (sendUsername === null) {
-          return res.send('sender not found');
+          return res.json({
+            msg: 'sender not found'
+          });
         }
 
         if (recvUuid === null) {
-          return res.send('receiver not found');
+          return res.json({
+            msg: 'receiver not found'
+          });
         }
 
         Promise.all([
@@ -113,30 +133,48 @@ app.get('/api/minecraft/command', (req: any, res) => {
         ])
         .then(([sendUserId, recvUserId, token]) => {
           if (sendUserId === null) {
-            return res.send('uuid not found');
+            return res.json({
+              msg: 'uuid not found'
+            });
           }
 
           if (token === null) {
-            return res.send('token not found');
+            return res.json({
+              msg: 'token not found'
+            });
           }
 
           if (sendUserId === recvUserId) {
-            return res.send('cannot send to yourself');
+            return res.json({
+              msg: 'cannot send to yourself'
+            });
           }
 
           db.transfer(serverData.id, sendUserId, recvUserId, token, amount)
           .then((result: db.TransferResult) => {
             if (result.success) {
-              return res.send(`Sent ${amount} to ${username}`);
+              return res.json({
+                msg: `sent ${amount} ${tokenName} to ${username}`,
+                msgs: [
+                  {
+                    uuid: recvUuid,
+                    msg: `${sendUsername} sent you ${amount} ${tokenName}`
+                  }
+                ]
+              });
             } else {
-              return res.send(result.errorMsg);
+              return res.json({
+                msg: result.errorMsg
+              });
             }
           })
         });
       });
     }
     else {
-      return res.send(helpText());
+      return res.json({
+        msg: helpText()
+      });
     }
   });
 });
