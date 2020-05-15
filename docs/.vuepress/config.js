@@ -4,7 +4,7 @@ module.exports = {
  themeConfig: {
    nav: [
      { text: 'Home', link: '/' },
-     { text: 'Guide', link: '/guide/' },
+     { text: 'API', link: '/api' },
      { text: 'Sign Up', link: 'https://magixpixel.xyz' },
    ]
  }

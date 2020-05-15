@@ -15,6 +15,7 @@ export interface Server {
 
 export function authenticateServer(password: string, ipAddress: string): Promise<Server|null> {
   console.log(password, ipAddress);
+
   return new Promise((resolve, reject) => {
     db.any(`SELECT id, game, email, ip_address
             FROM servers

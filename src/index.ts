@@ -17,14 +17,9 @@ app.get('/', (req: any, res) => {
   res.render("index");
 });
 
-const helpText = (): string => `Magic Pixel
-
-send tokens to others!
-
-/mpx balance                            check balance
-/mpx send [username] [amount] [token?]  send tokens
-
-magicpixel.xyz`;
+const helpText = (): string => `Magic Pixel | magicpixel.xyz
+/mpx balance [token?]
+/mpx send [username] [amount] [token?]`;
 
 function getBalances(serverId: number, uuid: string): Promise<Map<string, BigNumber>> {
   return new Promise((resolve, reject) => {
@@ -38,19 +33,19 @@ function getBalances(serverId: number, uuid: string): Promise<Map<string, BigNum
   });
 }
 
-app.get('/api/minecraft/command', (req: any, res) => {
+app.post('/api/command/minecraft', (req: any, res) => {
   // console.log(req);
-  db.authenticateServer(req.query.password, req.ip)
+  db.authenticateServer(req.header('X-Auth-Token'), req.ip)
   .then((serverData: db.Server|null) => {
     if (serverData === null) {
       return res.json({
-        msg: 'could not authenticate'
+        msg: 'Could not authenticate'
       });
     }
 
     if (typeof req.query.q === 'undefined') {
       return res.json({
-        msg: 'query parameter q does not exist'
+        msg: 'Query parameter q does not exist'
       });
     }
 
@@ -71,7 +66,7 @@ app.get('/api/minecraft/command', (req: any, res) => {
     }
     else if (cmd[0] === 'version') {
       return res.json({
-        msg: 'magic pixel 0.0.1 | magicpixel.xyz'
+        msg: 'Magic Pixel 0.0.1 | magicpixel.xyz'
       });
     }
     else if ((cmd[0] === 'b' || cmd[0] === 'balance') &&
@@ -116,13 +111,13 @@ app.get('/api/minecraft/command', (req: any, res) => {
       .then(([sendUsername, recvUuid]) => {
         if (sendUsername === null) {
           return res.json({
-            msg: 'sender not found'
+            msg: `"${username}" not found, check spelling`
           });
         }
 
         if (recvUuid === null) {
           return res.json({
-            msg: 'receiver not found'
+            msg: 'Receiver not found\n/mpx send [username] [amount] [token]'
           });
         }
 
@@ -134,19 +129,25 @@ app.get('/api/minecraft/command', (req: any, res) => {
         .then(([sendUserId, recvUserId, token]) => {
           if (sendUserId === null) {
             return res.json({
-              msg: 'uuid not found'
+              msg: 'Send uuid not found'
             });
           }
 
           if (token === null) {
             return res.json({
-              msg: 'token not found'
+              msg: `Token "${tokenName}" not found`
             });
           }
 
           if (sendUserId === recvUserId) {
             return res.json({
-              msg: 'cannot send to yourself'
+              msg: 'Cannot send to yourself'
+            });
+          }
+
+          if (amount.isLessThan(1)) {
+            return res.json({
+              msg: `Cannot send less than 1 ${tokenName}`
             });
           }
 
@@ -154,7 +155,7 @@ app.get('/api/minecraft/command', (req: any, res) => {
           .then((result: db.TransferResult) => {
             if (result.success) {
               return res.json({
-                msg: `sent ${amount} ${tokenName} to ${username}`,
+                msg: `Sent ${amount} ${tokenName} to ${username}`,
                 msgs: [
                   {
                     uuid: recvUuid,
@@ -180,8 +181,7 @@ app.get('/api/minecraft/command', (req: any, res) => {
 });
 
 app.get('/api/balance/:uuid', (req: any, res) => {
-  console.log(req.params.uuid);
-  db.authenticateServer(req.query.password, req.ip)
+  db.authenticateServer(req.header('X-Auth-Token'), req.ip)
   .then((serverData: db.Server|null) => {
     if (serverData === null) {
       return res.json({
@@ -205,13 +205,13 @@ app.get('/api/balance/:uuid', (req: any, res) => {
   });
 });
 
-app.get('/api/send/:uuid1/:uuid2/:token_id/:amount', (req: any, res) => {
+app.post('/api/send/:uuid1/:uuid2/:token_id/:amount', (req: any, res) => {
   const sendUuid: string = req.params.uuid1.replace(/-/g, '');
   const recvUuid: string = req.params.uuid2.replace(/-/g, '');
   const tokenId: string = req.params.token_id;
   const amount: BigNumber = new BigNumber(req.params.amount);
 
-  db.authenticateServer(req.query.password, req.ip)
+  db.authenticateServer(req.header('X-Auth-Token'), req.ip)
   .then((serverData: db.Server|null) => {
     if (serverData === null) {
       return res.json({
@@ -298,8 +298,8 @@ app.get('/api/servers', (req: any, res) => {
   });
 });
 
-app.get('/api/server/transfers', (req: any, res) => {
-  db.authenticateServer(req.query.password, req.ip)
+app.post('/api/server/transfers', (req: any, res) => {
+  db.authenticateServer(req.header('X-Auth-Token'), req.ip)
   .then((serverData: db.Server|null) => {
     if (serverData === null) {
       return res.json({
