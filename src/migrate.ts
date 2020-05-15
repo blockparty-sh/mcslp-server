@@ -102,6 +102,15 @@ const db = pgp(config.connString());
       'spice'
     )
   `);
+  await db.none(`
+    INSERT INTO tokens (
+      id,
+      name
+    ) VALUES (
+      '7f8889682d57369ed0e32336f8b7e0ffec625a35cca183f4e81fde4e71a538a1',
+      'honk'
+    )
+  `);
 
   await db.any(`
     CREATE TABLE IF NOT EXISTS servers (

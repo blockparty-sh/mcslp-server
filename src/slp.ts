@@ -19,6 +19,11 @@ declare module "bitcore-lib-cash" {
 
 const hdPrivateKey = new bitcore.HDPrivateKey(config.privateKey());
 
-export function getAddress(userId: number) {
-  return hdPrivateKey.deriveChild(0).publicKey.toAddress().toString();
+export function getAddress(serverId: number, userId: number): string {
+  return slpjs.Utils.toSlpAddress(
+	hdPrivateKey
+      .deriveChild(serverId)
+      .deriveChild(userId)
+      .publicKey.toAddress().toString()
+  );
 }

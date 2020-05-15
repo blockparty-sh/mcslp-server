@@ -4,11 +4,13 @@ import {BigNumber} from "bignumber.js";
 import * as mojang from "./mojang";
 import * as db from "./db";
 import * as config from "./config";
+import * as slp from "./slp";
 
 const app = express();
 
 app.enable('trust proxy');
 
+app.use(express.static('public'));
 app.set("views", path.join( __dirname, "../views" ));
 app.set("view engine", "ejs");
 
@@ -45,7 +47,7 @@ app.post('/api/command/minecraft', (req: any, res) => {
 
     if (typeof req.query.q === 'undefined') {
       return res.json({
-        msg: 'Query parameter q does not exist'
+        msg: 'Query parameter "q" does not exist'
       });
     }
 
@@ -289,12 +291,62 @@ app.get('/api/tokens', (req: any, res) => {
 
 app.get('/api/servers', (req: any, res) => {
   db.getAllServers()
-  .then((tokens) => {
-    return res.json(tokens.map(t => ({
+  .then((servers) => {
+    return res.json(servers.map(t => ({
       id:         t.id,
       game:       t.game,
       ip_address: t.ip_address
     })));
+  });
+});
+
+app.get('/api/minecraft/lookup_uuid/:username', (req: any, res) => {
+  mojang.lookupMinecraftUuid(req.params.username)
+  .then((uuid) => {
+    return res.json({
+      uuid
+    });
+  });
+});
+
+app.get('/api/deposit/minecraft', (req: any, res) => {
+  const ret: any = [];
+  for (let i=0; i<20; ++i) {
+    for (let j=0; j<20; ++j) {
+      ret.push(slp.getAddress(i, j));
+    }
+  }
+  return res.json(ret);
+});
+
+app.get('/deposit', (req: any, res) => {
+  res.render("deposit");
+});
+
+app.get('/api/deposit/minecraft/:uuid', (req: any, res) => {
+  const uuid = req.params.uuid;
+
+  mojang.lookupMinecraftUsername(uuid)
+  .then((username) => {
+    if (username === null) {
+      return res.json({
+        error: 'uuid not found'
+      });
+    }
+
+    db.getAllServers()
+    .then((servers) => {
+      Promise.all(servers.map((s) => {
+        return db.getOrCreateUserId(s.id, uuid)
+        .then((userId) => ({
+          server: s,
+          address: slp.getAddress(s.id, userId)
+        }));
+      }))
+      .then((addressPairs) => {
+        return res.json(addressPairs);
+      });
+    });
   });
 });
 

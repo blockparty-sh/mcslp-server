@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Deposit</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cabin&display=swap" rel="stylesheet">
+	<style>
+	  body, html {
+        background-image: url(/wall1.jpg);
+		background-size: cover;
+		width: 100vw;
+		height: 100vh;
+	  }
+	  h1 {
+		font-size: 4rem;
+		margin: 0.5rem;
+		margin-bottom: 1rem;
+		text-align: center;
+		font-family: 'Cabin';
+		color: #fff;
+		font-weight:bold;
+		text-shadow: 3px 3px 10px #424242;
+	  }
+	  #container {
+		text-align: center;
+		flex-flow: column;
+	  }
+	  #tokens, #servers {
+		display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+		margin: 2rem;
+	  }
+	  .token {
+		width: 256px;
+		height: 256px;
+		background-size: cover;
+		color: #2d2d2d;
+	  }
+	  .qrcode {
+		width: 256px;
+		height: 256px;
+		padding: 50px;
+		background-color: #fff;
+		box-shadow: 3px 3px 8px #1b1b1b;
+	  }
+	  .qrcode img {
+		width: 100%;
+	  }
+	  input {
+		font-size: 3rem;
+		padding: 0.5rem;
+		text-align: center;
+		font-family: 'Cabin';
+		border-radius: 5px;
+        outline: 0px;
+        border: 0px;
+        box-shadow: 3px 3px 10px #1b1b1b;
+	  }
+	</style>
+  </head>
+  <body>
+	<div id="container">
+	  <h1>Deposit</h1>
+      <input type="text" id="minecraft_username" value="blockpartysh">
+
+	  <div id="tokens"></div>
+	  <div id="servers"></div>
+	</div>
+
+    <script src="https://unpkg.com/jquery@3.3.1/dist/jquery.min.js"></script>
+    <script src="/qrcode.min.js"></script>
+    <script>
+    fetch('/api/tokens')
+    .then(function(res) {
+      return res.json();
+    })
+    .then(function(res) {
+	  console.log(res);
+	  for (let m of res) {
+		$(`<div class="token" style="background-image:url(https://tokens.bch.sx/original/${m.id}.png)"></div>`)
+		.appendTo($('#tokens'));
+	  }
+	});
+
+    $('#minecraft_username').focusout(function() {
+      fetch('/api/minecraft/lookup_uuid/'+$(this).val())
+      .then(function(res) {
+        return res.json();
+      })
+      .then(function(res) {
+        fetch('/api/deposit/minecraft/'+res.uuid)
+        .then(function(res) {
+          return res.json();
+        })
+        .then(function(res) {
+          console.log(res);
+		  $('#servers').html('');
+          for (let m of res) {
+			$(`<div class="qrcode" id="server-${m.server.id}-qr"></div>`).appendTo($('#servers'));
+
+	        try {
+              new QRCode(document.getElementById(`server-${m.server.id}-qr`), {
+                text: m.address,
+                width: 512,
+                height: 512,
+                colorDark: '#222',
+                colorLight: '#fff',
+                correctLevel: QRCode.CorrectLevel.M
+              });
+            } catch (e) {
+              console.error(e);
+            }
+
+    		const b64 = btoa(JSON.stringify({
+			  "v": 3,
+			  "q": {
+				"db": ["u", "c"],
+				"find": {
+				  "out.e.a": m.address,
+				}
+			  }
+			}));
+    		const url = 'https://slpstream.fountainhead.cash/s/' + b64;
+    		const sse = new EventSource(url);
+
+    		sse.onmessage = function (e) {
+    		  return console.log(JSON.parse(e.data));
+    		};
+          }
+        })
+      })
+    });
+    </script>
+  </body>
+</html>
