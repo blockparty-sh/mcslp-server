@@ -16,6 +16,14 @@ curl -X GET "https://api.magicpixel.xyz/tokens"
 curl -X GET "https://api.magicpixel.xyz/servers"
 ```
 
+### Look up Minecraft uuid
+
+This will retrieve the `uuid` from Mojang given your Minecraft username. The results are cached for some period of time.
+
+```bash
+curl -X GET "https://api.magicpixel.xyz/minecraft/lookup_uuid/:username
+```
+
 
 ## Authenticated
 
